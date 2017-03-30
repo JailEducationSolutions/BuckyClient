@@ -1,14 +1,12 @@
-isServer = module? and not window?.module
+isServer = ->
+  module? and not window?.module
 
-if isServer
-  {XMLHttpRequest} = require('xmlhttprequest')
-
-  now = ->
+now = ->
+  if isServer()
+    {XMLHttpRequest} = require('xmlhttprequest')
     time = process.hrtime()
     (time[0] + time[1] / 1e9) * 1000
-
-else
-  now = ->
+  else
     window.performance?.now?() ? (+new Date)
 
 # This is used if we can't get the navigationStart time from
@@ -65,7 +63,7 @@ exportDef = ->
     active: true
 
   tagOptions = {}
-  if not isServer
+  if not isServer()
     $tag = document.querySelector?('[data-bucky-host],[data-bucky-page],[data-bucky-requests]')
     if $tag
       tagOptions = {
@@ -154,9 +152,9 @@ exportDef = ->
       maxTimeout = setTimeout flush, options.maxInterval
 
   makeRequest = (data) ->
-    corsSupport = isServer or (window.XMLHttpRequest and (window.XMLHttpRequest.defake or 'withCredentials' of new window.XMLHttpRequest()))
+    corsSupport = isServer() or (window.XMLHttpRequest and (window.XMLHttpRequest.defake or 'withCredentials' of new window.XMLHttpRequest()))
 
-    if isServer
+    if isServer()
       sameOrigin = true
     else
       match = /^(https?:\/\/[^\/]+)/i.exec options.host

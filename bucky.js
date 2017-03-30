@@ -1,22 +1,21 @@
 (function() {
-  var XMLHttpRequest, exportDef, extend, initTime, isServer, log, now,
+  var exportDef, extend, initTime, isServer, log, now,
     __slice = [].slice;
 
-  isServer = (typeof module !== "undefined" && module !== null) && !(typeof window !== "undefined" && window !== null ? window.module : void 0);
+  isServer = function() {
+    return (typeof module !== "undefined" && module !== null) && !(typeof window !== "undefined" && window !== null ? window.module : void 0);
+  };
 
-  if (isServer) {
-    XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
-    now = function() {
-      var time;
+  now = function() {
+    var XMLHttpRequest, time, _ref, _ref1;
+    if (isServer()) {
+      XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
       time = process.hrtime();
       return (time[0] + time[1] / 1e9) * 1000;
-    };
-  } else {
-    now = function() {
-      var _ref, _ref1;
+    } else {
       return (_ref = (_ref1 = window.performance) != null ? typeof _ref1.now === "function" ? _ref1.now() : void 0 : void 0) != null ? _ref : +(new Date);
-    };
-  }
+    }
+  };
 
   initTime = +(new Date);
 
@@ -61,7 +60,7 @@
       active: true
     };
     tagOptions = {};
-    if (!isServer) {
+    if (!isServer()) {
       $tag = typeof document.querySelector === "function" ? document.querySelector('[data-bucky-host],[data-bucky-page],[data-bucky-requests]') : void 0;
       if ($tag) {
         tagOptions = {
@@ -145,8 +144,8 @@
     };
     makeRequest = function(data) {
       var body, corsSupport, match, name, origin, req, sameOrigin, sendStart, val, _ref3;
-      corsSupport = isServer || (window.XMLHttpRequest && (window.XMLHttpRequest.defake || 'withCredentials' in new window.XMLHttpRequest()));
-      if (isServer) {
+      corsSupport = isServer() || (window.XMLHttpRequest && (window.XMLHttpRequest.defake || 'withCredentials' in new window.XMLHttpRequest()));
+      if (isServer()) {
         sameOrigin = true;
       } else {
         match = /^(https?:\/\/[^\/]+)/i.exec(options.host);
