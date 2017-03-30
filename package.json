@@ -4,7 +4,7 @@
   "description": "Collect performance data from the client and node",
   "main": "./bucky.js",
   "dependencies": {
-    "xmlhttprequest": "~1.6.0"
+    "xmlhttprequest": "~1.8.0"
   },
   "devDependencies": {
     "grunt-contrib-concat": "~0.3.0",
