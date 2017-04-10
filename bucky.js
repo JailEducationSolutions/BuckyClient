@@ -132,7 +132,7 @@
     flush = function() {
       clearTimeout(sendTimeout);
       clearTimeout(maxTimeout);
-      maxTimeout = null;
+      maxTimeout = setTimeout(flush, options.maxInterval);
       sendTimeout = null;
       return sendQueue();
     };
@@ -184,9 +184,6 @@
       };
       req.open('POST', "" + options.host + "/v1/send", true);
       req.setRequestHeader('Content-Type', 'text/plain');
-      req.addEventListener('load', function() {
-        return updateLatency(now() - sendStart);
-      }, false);
       for (name in handlers) {
         fn = handlers[name];
         req.addEventListener(name, fn, false);
@@ -195,17 +192,25 @@
         fn = globalHandlers[name];
         req.addEventListener(name, fn, false);
       }
+      req.addEventListener('load', function() {
+        return updateLatency(now() - sendStart);
+      }, false);
       req.send(body);
       return req;
     };
+    isSending = false;
     sendQueue = function() {
-      var onLoad, out, point, value, _ref3;
+      var onError, onLoad, out, point, value, _ref3;
       if (!ACTIVE) {
         log("Would send bucky queue");
         return;
       }
       if (isSending) {
         log("Sending in progress, aborting");
+        return;
+      }
+      if (queue.size === 0) {
+        log("Queue Empty");
         return;
       }
       out = {};
@@ -230,13 +235,17 @@
           out[key] += "@" + (round(1 / point.count, 5));
         }
       }
-      isSending = true;
       onLoad = function(e) {
         isSending = false;
         return queue = {};
       };
+      onError = function(e) {
+        return isSending = false;
+      };
+      isSending = true;
       return makeRequest(out, {
-        'load': onLoad
+        'load': onLoad,
+        'error': onError
       });
     };
     latencySent = false;
@@ -627,6 +636,7 @@
         sendPagePerformance: sendPagePerformance,
         flush: flush,
         setHandlers: setHandlers,
+        isSending: isSending,
         clearHandlers: clearHandlers,
         setOptions: setOptions,
         options: options,

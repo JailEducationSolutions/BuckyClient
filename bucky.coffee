@@ -136,7 +136,7 @@ exportDef = ->
     clearTimeout sendTimeout
     clearTimeout maxTimeout
 
-    maxTimeout = null
+    maxTimeout = setTimeout flush, options.maxInterval
     sendTimeout = null
 
     do sendQueue
@@ -202,9 +202,6 @@ exportDef = ->
 
     req.setRequestHeader 'Content-Type', 'text/plain'
 
-    req.addEventListener 'load', ->
-      updateLatency(now() - sendStart)
-    , false
 
     for name, fn of handlers
       req.addEventListener name, fn, false
@@ -212,9 +209,15 @@ exportDef = ->
     for name, fn of globalHandlers
       req.addEventListener name, fn, false
 
+    #We want this guy to fire last otherwise the other handlers will clear the queue
+    req.addEventListener 'load', ->
+      updateLatency(now() - sendStart)
+    , false
+
     req.send body
     req
 
+  isSending = false
   sendQueue = ->
     if not ACTIVE
       log "Would send bucky queue"
@@ -222,6 +225,10 @@ exportDef = ->
 
     if isSending
       log "Sending in progress, aborting"
+      return
+
+    if queue.size == 0
+      log "Queue Empty"
       return
 
     out = {}
@@ -245,12 +252,14 @@ exportDef = ->
       if point.count isnt 1
         out[key] += "@#{ round(1 / point.count, 5) }"
 
-    isSending = true
     onLoad = (e) ->
       isSending = false
       queue = {}
+    onError = (e) ->
+      isSending = false
 
-    makeRequest out, {'load': onLoad}
+    isSending = true
+    makeRequest out, {'load': onLoad, 'error': onError}
 
   latencySent = false
   updateLatency = (time) ->
@@ -587,6 +596,7 @@ exportDef = ->
       sendPagePerformance,
       flush,
       setHandlers,
+      isSending,
       clearHandlers,
       setOptions,
       options,
