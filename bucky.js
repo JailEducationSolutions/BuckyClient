@@ -49,7 +49,7 @@
   };
 
   exportDef = function() {
-    var $tag, ACTIVE, HISTORY, TYPE_MAP, client, considerSending, defaults, enqueue, flush, key, latencySent, makeClient, makeRequest, maxTimeout, options, queue, round, sendQueue, sendTimeout, setOptions, tagOptions, updateActive, updateLatency, _i, _len, _ref, _ref1, _ref2;
+    var $tag, ACTIVE, HISTORY, TYPE_MAP, clearHandlers, client, considerSending, defaults, enqueue, flush, globalHandlers, isSending, key, latencySent, makeClient, makeRequest, maxTimeout, options, queue, round, sendQueue, sendTimeout, setHandlers, setOptions, tagOptions, updateActive, updateLatency, _i, _len, _ref, _ref1, _ref2;
     defaults = {
       host: '/bucky',
       maxInterval: 30000,
@@ -104,6 +104,7 @@
       return Math.round(num * Math.pow(10, precision)) / Math.pow(10, precision);
     };
     queue = {};
+    isSending = false;
     enqueue = function(path, value, type) {
       var count, _ref3;
       if (!ACTIVE) {
@@ -135,6 +136,13 @@
       sendTimeout = null;
       return sendQueue();
     };
+    globalHandlers = {};
+    setHandlers = function(handlers) {
+      return globalHandlers = handlers;
+    };
+    clearHandlers = function() {
+      return globalHandlers = {};
+    };
     considerSending = function() {
       clearTimeout(sendTimeout);
       sendTimeout = setTimeout(flush, options.aggregationInterval);
@@ -142,8 +150,8 @@
         return maxTimeout = setTimeout(flush, options.maxInterval);
       }
     };
-    makeRequest = function(data) {
-      var body, corsSupport, match, name, origin, req, sameOrigin, sendStart, val, _ref3;
+    makeRequest = function(data, handlers) {
+      var body, corsSupport, fn, match, name, origin, req, sameOrigin, sendStart, val, _ref3;
       corsSupport = isServer() || (window.XMLHttpRequest && (window.XMLHttpRequest.defake || 'withCredentials' in new window.XMLHttpRequest()));
       if (isServer()) {
         sameOrigin = true;
@@ -179,13 +187,25 @@
       req.addEventListener('load', function() {
         return updateLatency(now() - sendStart);
       }, false);
+      for (name in handlers) {
+        fn = handlers[name];
+        req.addEventListener(name, fn, false);
+      }
+      for (name in globalHandlers) {
+        fn = globalHandlers[name];
+        req.addEventListener(name, fn, false);
+      }
       req.send(body);
       return req;
     };
     sendQueue = function() {
-      var out, point, value, _ref3;
+      var onLoad, out, point, value, _ref3;
       if (!ACTIVE) {
         log("Would send bucky queue");
+        return;
+      }
+      if (isSending) {
+        log("Sending in progress, aborting");
         return;
       }
       out = {};
@@ -210,8 +230,14 @@
           out[key] += "@" + (round(1 / point.count, 5));
         }
       }
-      makeRequest(out);
-      return queue = {};
+      isSending = true;
+      onLoad = function(e) {
+        isSending = false;
+        return queue = {};
+      };
+      return makeRequest(out, {
+        'load': onLoad
+      });
     };
     latencySent = false;
     updateLatency = function(time) {
@@ -600,6 +626,8 @@
         requests: requests,
         sendPagePerformance: sendPagePerformance,
         flush: flush,
+        setHandlers: setHandlers,
+        clearHandlers: clearHandlers,
         setOptions: setOptions,
         options: options,
         history: HISTORY,

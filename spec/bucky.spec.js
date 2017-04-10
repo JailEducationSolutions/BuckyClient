@@ -108,20 +108,49 @@
       return server.autoRespond = true;
     });
     afterEach(function() {
-      return server.restore();
+      server.restore();
+      return Bucky.clearHandlers();
     });
     it('should send a datapoint', function() {
-      Bucky.send('data.point', 4);
-      Bucky.flush();
-      expect(server.requests.length).toBe(1);
-      return expect(server.requests[0].requestBody).toBe("data.point:4|g\n");
+      var loaded;
+      loaded = false;
+      Bucky.setHandlers({
+        'load': function() {
+          return loaded = true;
+        }
+      });
+      runs(function() {
+        Bucky.send('data.point', 4);
+        return Bucky.flush();
+      });
+      waitsFor((function() {
+        return loaded;
+      }), "Expected async call to return", 1000);
+      return runs(function() {
+        expect(server.requests.length).toBe(1);
+        return expect(server.requests[0].requestBody).toBe("data.point:4|g\n");
+      });
     });
     return it('should send timers', function() {
-      Bucky.send('data.1', 5, 'timer');
-      Bucky.send('data.2', 3, 'timer');
-      Bucky.flush();
-      expect(server.requests.length).toBe(1);
-      return expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n");
+      var loaded;
+      loaded = false;
+      Bucky.setHandlers({
+        'load': function() {
+          return loaded = true;
+        }
+      });
+      runs(function() {
+        Bucky.send('data.1', 5, 'timer');
+        Bucky.send('data.2', 3, 'timer');
+        return Bucky.flush();
+      });
+      waitsFor((function() {
+        return loaded;
+      }), "Expected async call to return", 1000);
+      return runs(function() {
+        expect(server.requests.length).toBe(1);
+        return expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n");
+      });
     });
   });
 

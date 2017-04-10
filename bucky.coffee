@@ -106,6 +106,8 @@ exportDef = ->
     Math.round(num * Math.pow(10, precision)) / Math.pow(10, precision)
 
   queue = {}
+  isSending = false
+
   enqueue = (path, value, type) ->
     return unless ACTIVE
 
@@ -139,6 +141,13 @@ exportDef = ->
 
     do sendQueue
 
+  globalHandlers = {}
+  setHandlers = (handlers) ->
+    globalHandlers = handlers
+
+  clearHandlers = ->
+    globalHandlers = {}
+
   considerSending = ->
     # We set two different timers, one which resets with every request
     # to try to get as many datapoints into each send, and another which
@@ -151,7 +160,7 @@ exportDef = ->
     unless maxTimeout?
       maxTimeout = setTimeout flush, options.maxInterval
 
-  makeRequest = (data) ->
+  makeRequest = (data, handlers) ->
     corsSupport = isServer() or (window.XMLHttpRequest and (window.XMLHttpRequest.defake or 'withCredentials' of new window.XMLHttpRequest()))
 
     if isServer()
@@ -197,13 +206,22 @@ exportDef = ->
       updateLatency(now() - sendStart)
     , false
 
-    req.send body
+    for name, fn of handlers
+      req.addEventListener name, fn, false
 
+    for name, fn of globalHandlers
+      req.addEventListener name, fn, false
+
+    req.send body
     req
 
   sendQueue = ->
     if not ACTIVE
       log "Would send bucky queue"
+      return
+
+    if isSending
+      log "Sending in progress, aborting"
       return
 
     out = {}
@@ -227,9 +245,12 @@ exportDef = ->
       if point.count isnt 1
         out[key] += "@#{ round(1 / point.count, 5) }"
 
-    makeRequest out
+    isSending = true
+    onLoad = (e) ->
+      isSending = false
+      queue = {}
 
-    queue = {}
+    makeRequest out, {'load': onLoad}
 
   latencySent = false
   updateLatency = (time) ->
@@ -565,6 +586,8 @@ exportDef = ->
       requests,
       sendPagePerformance,
       flush,
+      setHandlers,
+      clearHandlers,
       setOptions,
       options,
       history: HISTORY,

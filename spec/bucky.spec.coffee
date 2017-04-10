@@ -96,19 +96,37 @@ describe 'send', ->
 
   afterEach ->
     server.restore()
+    Bucky.clearHandlers();
 
   it 'should send a datapoint', ->
-    Bucky.send 'data.point', 4
-    Bucky.flush()
+    loaded = false
+    Bucky.setHandlers({'load': -> loaded = true })
 
-    expect(server.requests.length).toBe(1)
-    expect(server.requests[0].requestBody).toBe("data.point:4|g\n")
+    runs ->
+      Bucky.send 'data.point', 4
+      Bucky.flush()
+
+    waitsFor (-> return loaded),
+      "Expected async call to return",
+      1000
+
+    runs ->
+      expect(server.requests.length).toBe(1)
+      expect(server.requests[0].requestBody).toBe("data.point:4|g\n")
 
   it 'should send timers', ->
-    Bucky.send 'data.1', 5, 'timer'
-    Bucky.send 'data.2', 3, 'timer'
-    Bucky.flush()
+    loaded = false
+    Bucky.setHandlers({'load': -> loaded = true})
 
-    expect(server.requests.length).toBe(1)
+    runs ->
+      Bucky.send 'data.1', 5, 'timer'
+      Bucky.send 'data.2', 3, 'timer'
+      Bucky.flush()
 
-    expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n")
+    waitsFor (-> return loaded),
+      "Expected async call to return",
+      1000
+
+    runs ->
+      expect(server.requests.length).toBe(1)
+      expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n")
