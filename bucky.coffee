@@ -108,6 +108,9 @@ exportDef = ->
   queue = {}
   isSending = false
 
+  clearQueue = ->
+    queue = {}
+
   enqueue = (path, value, type) ->
     return unless ACTIVE
 
@@ -227,7 +230,7 @@ exportDef = ->
       log "Sending in progress, aborting"
       return
 
-    if queue.size == 0
+    if Object.keys(queue).length == 0
       log "Queue Empty"
       return
 
@@ -595,6 +598,7 @@ exportDef = ->
       requests,
       sendPagePerformance,
       flush,
+      clearQueue,
       setHandlers,
       isSending,
       clearHandlers,

@@ -49,7 +49,7 @@
   };
 
   exportDef = function() {
-    var $tag, ACTIVE, HISTORY, TYPE_MAP, clearHandlers, client, considerSending, defaults, enqueue, flush, globalHandlers, isSending, key, latencySent, makeClient, makeRequest, maxTimeout, options, queue, round, sendQueue, sendTimeout, setHandlers, setOptions, tagOptions, updateActive, updateLatency, _i, _len, _ref, _ref1, _ref2;
+    var $tag, ACTIVE, HISTORY, TYPE_MAP, clearHandlers, clearQueue, client, considerSending, defaults, enqueue, flush, globalHandlers, isSending, key, latencySent, makeClient, makeRequest, maxTimeout, options, queue, round, sendQueue, sendTimeout, setHandlers, setOptions, tagOptions, updateActive, updateLatency, _i, _len, _ref, _ref1, _ref2;
     defaults = {
       host: '/bucky',
       maxInterval: 30000,
@@ -105,6 +105,9 @@
     };
     queue = {};
     isSending = false;
+    clearQueue = function() {
+      return queue = {};
+    };
     enqueue = function(path, value, type) {
       var count, _ref3;
       if (!ACTIVE) {
@@ -209,7 +212,7 @@
         log("Sending in progress, aborting");
         return;
       }
-      if (queue.size === 0) {
+      if (Object.keys(queue).length === 0) {
         log("Queue Empty");
         return;
       }
@@ -635,6 +638,7 @@
         requests: requests,
         sendPagePerformance: sendPagePerformance,
         flush: flush,
+        clearQueue: clearQueue,
         setHandlers: setHandlers,
         isSending: isSending,
         clearHandlers: clearHandlers,

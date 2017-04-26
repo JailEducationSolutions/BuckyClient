@@ -131,7 +131,7 @@
         return expect(server.requests[0].requestBody).toBe("data.point:4|g\n");
       });
     });
-    return it('should send timers', function() {
+    it('should send timers', function() {
       var loaded;
       loaded = false;
       Bucky.setHandlers({
@@ -150,6 +150,22 @@
       return runs(function() {
         expect(server.requests.length).toBe(1);
         return expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n");
+      });
+    });
+    return it('should not send on an empty queue', function() {
+      var loaded;
+      loaded = false;
+      Bucky.setHandlers({
+        'load': function() {
+          return loaded = true;
+        }
+      });
+      runs(function() {
+        Bucky.clearQueue();
+        return Bucky.flush();
+      });
+      return runs(function() {
+        return expect(server.requests.length).toBe(0);
       });
     });
   });

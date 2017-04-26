@@ -130,3 +130,14 @@ describe 'send', ->
     runs ->
       expect(server.requests.length).toBe(1)
       expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n")
+
+  it 'should not send on an empty queue', ->
+    loaded = false
+    Bucky.setHandlers({'load': -> loaded = true})
+
+    runs ->
+      Bucky.clearQueue()
+      Bucky.flush()
+
+    runs ->
+      expect(server.requests.length).toBe(0)
